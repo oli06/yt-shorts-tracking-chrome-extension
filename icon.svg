@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="16" height="16" fill="#FF0000"/>
+    
+    <!-- Play button -->
+    <path d="M40,30 L98,64 L40,98 Z" fill="#FFFFFF"/>
+</svg> 

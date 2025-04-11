@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>YouTube Shorts Tracker</title>
+  <script src="lib/chart.min.js"></script>
+  <style>
+    body {
+      width: 350px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .today-counter {
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .counter-number {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ff0000;
+    }
+    .counter-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .chart-container {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 8px;
+      height: 200px; /* Fixed height for the chart */
+    }
+    .button-container {
+      display: flex;
+      gap: 10px;
+    }
+    .reset-button {
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+      flex: 1;
+    }
+    .export-button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+      flex: 1;
+    }
+    .test-notification-button {
+      background-color: #34a853;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+      width: 100%;
+    }
+    .reset-button:hover {
+      background-color: #cc0000;
+    }
+    .reset-button:active {
+      background-color: #990000;
+    }
+    .export-button:hover {
+      background-color: #3367d6;
+    }
+    .export-button:active {
+      background-color: #2a56c0;
+    }
+    .test-notification-button:hover {
+      background-color: #2d8f47;
+    }
+    .test-notification-button:active {
+      background-color: #26763c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- <h2>YouTube Shorts Tracker</h2> -->
+    <div class="today-counter">
+      <div class="counter-number" id="todayCount">0</div>
+      <div class="counter-label">Shorts watched today</div>
+    </div>
+    <div class="chart-container">
+      <canvas id="weeklyChart"></canvas>
+    </div>
+    <div class="button-container">
+      <button id="resetButton" class="reset-button">Reset Statistics</button>
+      <button id="exportButton" class="export-button">Export Data</button>
+    </div>
+    <button id="testNotificationButton" class="test-notification-button">Test Notification</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
