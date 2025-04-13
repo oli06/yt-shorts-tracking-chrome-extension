@@ -166,4 +166,16 @@ document.getElementById('testNotificationButton').addEventListener('click', () =
 });
 
 // Update stats when popup opens
-document.addEventListener('DOMContentLoaded', updateStats);
+document.addEventListener('DOMContentLoaded', function() {
+  // Load redirect setting
+  chrome.storage.local.get(['enableRedirect'], function(result) {
+    document.getElementById('enableRedirect').checked = result.enableRedirect || false;
+  });
+
+  // Save redirect setting when changed
+  document.getElementById('enableRedirect').addEventListener('change', function(e) {
+    chrome.storage.local.set({ enableRedirect: e.target.checked });
+  });
+
+  updateStats();
+});

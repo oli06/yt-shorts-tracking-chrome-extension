@@ -75,7 +75,7 @@ async function updateShortsCount(url) {
   console.log("lastnotificationdate", result.lastNotificationDate)
     // Check if we need to show a notification
     console.log("count", count)
-    if (count === 10 && result.lastNotificationDate !== today) {
+    if (count === 10) {
       showNotification();
       chrome.storage.local.set({ lastNotificationDate: today });
     }
@@ -104,8 +104,23 @@ function showNotification() {
 
   // Try to open the popup
   chrome.action.openPopup().catch(error => {
-    console.log('Could not open popup:', error);
-    // This might fail if the popup is already open or if the extension is not in the toolbar
+    console.log('C^ould not open popup:', error);
+  });
+
+  // Check if redirect is enabled
+  chrome.storage.local.get(['enableRedirect'], function(result) {
+    if (result.enableRedirect) {
+      // Get the current tab and remove it, then create a new one
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs[0]) {
+          // Remove the current tab
+          chrome.tabs.remove(tabs[0].id, function() {
+            // Create a new tab with r/GetDisciplined
+            chrome.tabs.create({ url: 'https://www.reddit.com/r/GetDisciplined' });
+          });
+        }
+      });
+    }
   });
 }
 

@@ -1,5 +1,6 @@
 // Track the last viewed Shorts URL
 let lastShortsUrl = '';
+let shortsTimer = null;
 
 // Function to check if we're on a Shorts page and send message
 function checkAndSendMessage() {
@@ -8,16 +9,29 @@ function checkAndSendMessage() {
     const currentUrl = window.location.pathname;
     if (currentUrl !== lastShortsUrl) {
       console.log('✅ New Shorts video detected:', currentUrl);
-      lastShortsUrl = currentUrl;
-      chrome.runtime.sendMessage({ 
-        type: 'SHORTS_VIEWED',
-        url: currentUrl
-      });
+      // Clear any existing timer
+      if (shortsTimer) {
+        clearTimeout(shortsTimer);
+      }
+      // Start a new timer
+      shortsTimer = setTimeout(() => {
+        console.log('⏱️ Shorts viewed for more than 1 second:', currentUrl);
+        lastShortsUrl = currentUrl;
+        chrome.runtime.sendMessage({ 
+          type: 'SHORTS_VIEWED',
+          url: currentUrl
+        });
+      }, 1000); // 1 second delay
     } else {
       console.log('🔄 Same Shorts video, skipping');
     }
   } else {
     console.log('❌ Not a Shorts video');
+    // Clear timer when leaving Shorts
+    if (shortsTimer) {
+      clearTimeout(shortsTimer);
+      shortsTimer = null;
+    }
     lastShortsUrl = ''; // Reset when leaving Shorts
   }
 }

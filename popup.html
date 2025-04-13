@@ -91,6 +91,20 @@
     .test-notification-button:active {
       background-color: #26763c;
     }
+    .settings {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+    .setting-item {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .setting-item label {
+      margin-left: 8px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -109,6 +123,15 @@
     </div>
     <button id="testNotificationButton" class="test-notification-button">Test Notification</button>
   </div>
+  
+  <div class="settings">
+    <h3>Settings</h3>
+    <div class="setting-item">
+      <input type="checkbox" id="enableRedirect">
+      <label for="enableRedirect">Redirect to r/GetDisciplined when limit reached</label>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html> 
