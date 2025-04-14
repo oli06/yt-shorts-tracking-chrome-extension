@@ -114,10 +114,23 @@ async function resetStats() {
 
 // Export statistics data
 function exportStatistics() {
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'shortsWatchTime', 'sessionTimes', 'skippedUrls'], (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsUrls = result.shortsUrls || {};
     const shortsSkipped = result.shortsSkipped || {};
+    const shortsWatchTime = result.shortsWatchTime || {};
+    const sessionTimes = result.sessionTimes || {};
+    const skippedUrls = result.skippedUrls || {};
+    
+    // Calculate total watch time in minutes
+    const totalWatchTime = Object.values(shortsWatchTime).reduce((sum, seconds) => sum + seconds, 0) / 60;
+    
+    // Calculate total session time in minutes
+    const totalSessionTime = Object.values(sessionTimes).reduce((sum, sessions) => {
+      return sum + sessions.reduce((sessionSum, session) => {
+        return sessionSum + (typeof session === 'object' ? session.duration : session);
+      }, 0);
+    }, 0) / 60;
     
     // Create a structured object for export
     const exportData = {
@@ -125,20 +138,44 @@ function exportStatistics() {
         exportDate: new Date().toISOString(),
         totalDays: Object.keys(shortsHistory).length,
         totalShortsWatched: Object.values(shortsHistory).reduce((sum, count) => sum + count, 0),
-        totalShortsSkipped: Object.values(shortsSkipped).reduce((sum, count) => sum + count, 0)
+        totalShortsSkipped: Object.values(shortsSkipped).reduce((sum, count) => sum + count, 0),
+        totalWatchTimeMinutes: Math.round(totalWatchTime),
+        totalSessionTimeMinutes: Math.round(totalSessionTime)
       },
-      dailyStats: Object.entries(shortsHistory).map(([date, count]) => ({
-        date: date,
-        formattedDate: new Date(date).toLocaleDateString('en-US', {
-          weekday: 'short',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }),
-        watched: count,
-        skipped: shortsSkipped[date] || 0,
-        urls: shortsUrls[date] || []
-      })).sort((a, b) => b.date.localeCompare(a.date)) // Sort by date descending
+      dailyStats: Object.entries(shortsHistory).map(([date, count]) => {
+        // Get sessions for this day
+        const daySessions = sessionTimes[date] || [];
+        const formattedSessions = daySessions.map(session => {
+          if (typeof session === 'object') {
+            return {
+              duration: formatTime(session.duration),
+              durationMinutes: Math.round(session.duration / 60),
+              timestamp: session.timestamp
+            };
+          }
+          return {
+            duration: formatTime(session),
+            durationMinutes: Math.round(session / 60)
+          };
+        });
+        
+        return {
+          date: date,
+          formattedDate: new Date(date).toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }),
+          watched: count,
+          skipped: shortsSkipped[date] || 0,
+          watchTimeSeconds: shortsWatchTime[date] || 0,
+          watchTimeFormatted: formatTime(shortsWatchTime[date] || 0),
+          sessions: formattedSessions,
+          watchedUrls: shortsUrls[date] || [],
+          skippedUrls: skippedUrls[date] || []
+        };
+      }).sort((a, b) => b.date.localeCompare(a.date)) // Sort by date descending
     };
     
     // Create and download the file
