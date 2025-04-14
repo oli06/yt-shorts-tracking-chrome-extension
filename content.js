@@ -5,6 +5,8 @@ let currentShortsUrl = null;
 let shortsStartTime = null;
 let watchTimeInterval = null;
 let currentVideo = null;
+let sessionStartTime = null;
+let thresholdTimer = null;
 
 // Function to send watch time update
 function updateWatchTime() {
@@ -30,6 +32,32 @@ function stopWatchTimeTracking() {
   if (watchTimeInterval) {
     clearInterval(watchTimeInterval);
     watchTimeInterval = null;
+  }
+}
+
+// Function to format time in MM:SS
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+// Function to end current session
+function endSession() {
+  if (sessionStartTime) {
+    const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
+    const timestamp = new Date().toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
+    console.log('📊 Session ended, duration:', formatTime(sessionDuration), 'at', timestamp);
+    chrome.runtime.sendMessage({
+      type: 'END_SESSION',
+      duration: sessionDuration,
+      timestamp: timestamp
+    });
+    sessionStartTime = null;
   }
 }
 
@@ -99,6 +127,7 @@ function checkAndSendMessage() {
     
     // If this is a new shorts session, notify background
     if (!currentShortsUrl) {
+      sessionStartTime = Date.now();
       chrome.runtime.sendMessage({ type: 'START_SHORTS_SESSION' });
     }
     
@@ -182,8 +211,8 @@ function checkAndSendMessage() {
     currentShortsUrl = null;
     shortsStartTime = null;
     
-    // Notify background that shorts session has ended
-    chrome.runtime.sendMessage({ type: 'END_SHORTS_SESSION' });
+    // End current session if it exists
+    endSession();
   }
 }
 
@@ -229,4 +258,29 @@ window.addEventListener('popstate', () => {
 document.addEventListener('yt-navigate-finish', () => {
   console.log('🎥 YouTube navigation finished');
   checkAndSendMessage();
+});
+
+// Listen for visibility changes
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    console.log('👋 Tab hidden');
+    if (currentVideo && currentVideo.paused) {
+      // If video is paused, end session immediately
+      endSession();
+    } else {
+      // If video is playing, continue tracking
+      console.log('🎬 Video still playing, continuing session');
+    }
+  } else if (window.location.pathname.startsWith('/shorts/')) {
+    console.log('👋 Tab visible again');
+    if (!sessionStartTime) {
+      sessionStartTime = Date.now();
+    }
+  }
+});
+
+// Listen for page unload (tab closed)
+window.addEventListener('beforeunload', () => {
+  console.log('🔌 Tab closing');
+  endSession();
 }); 

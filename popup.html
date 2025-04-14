@@ -60,6 +60,13 @@
       border-radius: 8px;
       height: 200px; /* Fixed height for the chart */
     }
+    .session-chart-container {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 8px;
+      height: 200px;
+      margin-bottom: 15px;
+    }
     .button-container {
       display: flex;
       gap: 10px;
@@ -86,17 +93,6 @@
       transition: background-color 0.2s;
       flex: 1;
     }
-    .test-notification-button {
-      background-color: #34a853;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s;
-      width: 100%;
-    }
     .reset-button:hover {
       background-color: #cc0000;
     }
@@ -109,45 +105,54 @@
     .export-button:active {
       background-color: #2a56c0;
     }
-    .test-notification-button:hover {
-      background-color: #2d8f47;
+    
+    .session-times {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
     }
-    .test-notification-button:active {
-      background-color: #26763c;
-    }
-    .settings {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #eee;
-    }
-    .setting-item {
-      display: flex;
-      align-items: center;
-      margin: 10px 0;
-    }
-    .setting-item label {
-      margin-left: 8px;
-      cursor: pointer;
-    }
-    input[type="number"] {
-      padding: 4px 8px;
-      border: 1px solid #ccc;
+    .session-time {
+      display: inline-block;
+      margin: 0 5px 5px 0;
+      padding: 8px;
+      background: #e0e0e0;
       border-radius: 4px;
       font-size: 14px;
+      width: calc(16.666% - 10px); /* 6 items per row with margin */
+      box-sizing: border-box;
+      text-align: center;
+      line-height: 1.4;
     }
-    input[type="number"]:focus {
-      outline: none;
-      border-color: #4285f4;
+    .session-time br {
+      margin: 2px 0;
+    }
+    #sessionTimes {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 5px;
+    }
+    .settings-icon {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 1;
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <span class="settings-icon" id="settingsButton">
+      <img src="icons/gear-solid.svg" alt="Settings" style="width: 20px; height: 20px;">
+    </span>
     <div class="current-session">
       <div class="timer-display" id="sessionTimer">00:00</div>
       <div class="timer-label">Current session time</div>
     </div>
-    <!-- <h2>YouTube Shorts Tracker</h2> -->
     <div class="today-stats">
       <div class="today-counter">
         <div class="counter-number" id="todayCount">0</div>
@@ -158,30 +163,15 @@
         <div class="counter-label">Shorts skipped today</div>
       </div>
     </div>
+    <div class="session-chart-container">
+      <canvas id="sessionChart"></canvas>
+    </div>
     <div class="chart-container">
       <canvas id="weeklyChart"></canvas>
     </div>
     <div class="button-container">
       <button id="resetButton" class="reset-button">Reset Statistics</button>
       <button id="exportButton" class="export-button">Export Data</button>
-    </div>
-    <button id="testNotificationButton" class="test-notification-button">Test Notification</button>
-  </div>
-  
-  <div class="settings">
-    <h3>Settings</h3>
-    <div class="setting-item">
-      <input type="checkbox" id="enableRedirect">
-      <label for="enableRedirect">Redirect to r/GetDisciplined when limit reached</label>
-    </div>
-    <div class="setting-item">
-      <label for="redirectThreshold">Redirect after watching</label>
-      <input type="number" id="redirectThreshold" min="1" max="100" style="width: 60px; margin: 0 8px;">
-      <span>shorts</span>
-    </div>
-    <div class="setting-item">
-      <input type="checkbox" id="enableTimeBasedRedirect">
-      <label for="enableTimeBasedRedirect">Redirect after watching 3 minutes of shorts</label>
     </div>
   </div>
 

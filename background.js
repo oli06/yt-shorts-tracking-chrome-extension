@@ -1,6 +1,6 @@
 // Initialize storage with default values if not exists
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect', 'sessionTimes'], (result) => {
     if (!result.shortsHistory) {
       chrome.storage.local.set({
         shortsHistory: {},
@@ -9,8 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
         redirectThreshold: 5, // Default threshold for number of shorts
         enableTimeBasedRedirect: false, // Default time-based redirect setting
         shortsWatchTime: {}, // Track cumulative watch time per day
-        currentSessionTime: 0, // Track current session time
-        isWatchingShorts: false // Track if user is currently watching shorts
+        sessionTimes: {} // Track session times per day
       });
     }
   });
@@ -19,30 +18,28 @@ chrome.runtime.onInstalled.addListener(() => {
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SHORTS_VIEWED') {
-    updateShortsCount(request.url);
+    handleShortsViewed(request.url);
   } else if (request.type === 'SHORTS_SKIPPED') {
-    updateSkippedCount(request.url);
+    handleShortsSkipped(request.url);
   } else if (request.type === 'UPDATE_WATCH_TIME') {
     updateWatchTime(request.seconds);
-    updateSessionTime();
   } else if (request.type === 'START_SHORTS_SESSION') {
     startShortsSession();
-  } else if (request.type === 'END_SHORTS_SESSION') {
+  } else if (request.type === 'END_SESSION') {
     endShortsSession();
   } else if (request.type === 'GET_SESSION_TIME') {
     chrome.storage.local.get(['currentSessionTime'], (result) => {
       sendResponse({ sessionTime: result.currentSessionTime || 0 });
     });
-    return true; // Required for async response
+    return true;
+  } else if (request.type === 'RESET_BADGE') {
+    chrome.action.setBadgeText({ text: '' });
   }
 });
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'RESET_BADGE') {
-    chrome.action.setBadgeText({ text: '0' });
-    chrome.action.setBadgeBackgroundColor({ color: '#666666' });
-  } else if (message.type === 'TEST_NOTIFICATION') {
+  if (message.type === 'TEST_NOTIFICATION') {
     // Request notification permission if not already granted
     chrome.notifications.getPermissionLevel(level => {
       console.log("granted? level", level)
@@ -185,8 +182,10 @@ function showNotification(type) {
 async function updateWatchTime(seconds) {
   const today = new Date().toISOString().split('T')[0];
   
-  chrome.storage.local.get(['shortsWatchTime', 'enableTimeBasedRedirect'], (result) => {
+  chrome.storage.local.get(['shortsWatchTime', 'enableTimeBasedRedirect', 'currentSessionTime'], (result) => {
     const shortsWatchTime = result.shortsWatchTime || {};
+    const currentSessionTime = (result.currentSessionTime || 0) + seconds;
+    
     if (!shortsWatchTime[today]) {
       shortsWatchTime[today] = 0;
     }
@@ -194,7 +193,8 @@ async function updateWatchTime(seconds) {
     shortsWatchTime[today] += seconds;
     
     chrome.storage.local.set({
-      shortsWatchTime: shortsWatchTime
+      shortsWatchTime: shortsWatchTime,
+      currentSessionTime: currentSessionTime
     });
 
     // Check if we've hit the 3-minute threshold
@@ -204,11 +204,52 @@ async function updateWatchTime(seconds) {
   });
 }
 
+let currentSessionShortsCount = 0;
+
 // Start a new shorts session
 function startShortsSession() {
   chrome.storage.local.set({
     isWatchingShorts: true,
     currentSessionTime: 0
+  });
+  currentSessionShortsCount = 0;
+}
+
+// Handle shorts viewed
+function handleShortsViewed(url) {
+  const today = new Date().toISOString().split('T')[0];
+  
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'enableRedirect', 'redirectThreshold'], (result) => {
+    const shortsHistory = result.shortsHistory || {};
+    const shortsUrls = result.shortsUrls || {};
+    
+    // Update today's history
+    if (!shortsHistory[today]) {
+      shortsHistory[today] = 0;
+    }
+    shortsHistory[today]++;
+    
+    // Update today's URLs
+    if (!shortsUrls[today]) {
+      shortsUrls[today] = [];
+    }
+    shortsUrls[today].push(url);
+    
+    // Update storage
+    chrome.storage.local.set({
+      shortsHistory: shortsHistory,
+      shortsUrls: shortsUrls
+    });
+    
+    // Update badge
+    chrome.action.setBadgeText({ text: shortsHistory[today].toString() });
+    
+    // Increment session shorts count and check for redirect
+    currentSessionShortsCount++;
+    if (result.enableRedirect && currentSessionShortsCount >= (result.redirectThreshold || 5)) {
+      showNotification('count');
+      currentSessionShortsCount = 0; // Reset count after redirect
+    }
   });
 }
 
@@ -218,16 +259,7 @@ function endShortsSession() {
     isWatchingShorts: false,
     currentSessionTime: 0
   });
-}
-
-// Update the current session time
-function updateSessionTime() {
-  chrome.storage.local.get(['isWatchingShorts', 'currentSessionTime'], (result) => {
-    if (result.isWatchingShorts) {
-      const newTime = (result.currentSessionTime || 0) + 1;
-      chrome.storage.local.set({ currentSessionTime: newTime });
-    }
-  });
+  currentSessionShortsCount = 0;
 }
 
 // Initialize badge on startup

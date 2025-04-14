@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>YouTube Shorts Tracker - Settings</title>
+  <style>
+    body {
+      width: 400px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .back-button {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+      margin-right: 10px;
+    }
+    
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    
+    .settings-group {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    
+    .settings-group h2 {
+      margin-top: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .setting-item {
+      margin-bottom: 15px;
+    }
+    
+    .setting-item label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    .setting-item input[type="number"] {
+      width: 60px;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .setting-item input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    
+    .setting-description {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-button" id="backButton">
+        <img src="icons/arrow-left-solid.svg" alt="Back" style="width: 20px; height: 20px;">
+    </button>
+    <h1>Settings</h1>
+  </div>
+  
+  <div class="settings-group">
+    <h2>Redirect Settings</h2>
+    
+    <div class="setting-item">
+      <label>
+        <input type="checkbox" id="enableRedirect">
+        Enable Redirect
+      </label>
+      <div class="setting-description">
+        Redirect to r/GetDisciplined when limits are reached
+      </div>
+    </div>
+    
+    <div class="setting-item">
+      <label for="redirectThreshold">Redirect Threshold</label>
+      <input type="number" id="redirectThreshold" min="1" max="100">
+      <div class="setting-description">
+        Number of Shorts watched before redirect (1-100)
+      </div>
+    </div>
+  </div>
+  
+  <div class="settings-group">
+    <h2>Time-based Settings</h2>
+    
+    <div class="setting-item">
+      <label>
+        <input type="checkbox" id="enableTimeBasedRedirect">
+        Enable Time-based Redirect
+      </label>
+      <div class="setting-description">
+        Redirect after 3 minutes of watching Shorts
+      </div>
+    </div>
+  </div>
+  
+  <script src="settings.js"></script>
+</body>
+</html> 
