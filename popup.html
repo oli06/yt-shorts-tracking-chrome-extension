@@ -14,16 +14,40 @@
       flex-direction: column;
       gap: 15px;
     }
-    .today-counter {
+    .current-session {
       text-align: center;
-      padding: 20px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .timer-display {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4285f4;
+    }
+    .timer-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .today-stats {
+      display: flex;
+      gap: 10px;
+    }
+    .today-counter {
+      flex: 1;
+      text-align: center;
+      padding: 15px;
       background: #f5f5f5;
       border-radius: 8px;
     }
     .counter-number {
-      font-size: 48px;
+      font-size: 36px;
       font-weight: bold;
       color: #ff0000;
+    }
+    .counter-number-skipped {
+      color: #808080;
     }
     .counter-label {
       font-size: 14px;
@@ -105,14 +129,34 @@
       margin-left: 8px;
       cursor: pointer;
     }
+    input[type="number"] {
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #4285f4;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="current-session">
+      <div class="timer-display" id="sessionTimer">00:00</div>
+      <div class="timer-label">Current session time</div>
+    </div>
     <!-- <h2>YouTube Shorts Tracker</h2> -->
-    <div class="today-counter">
-      <div class="counter-number" id="todayCount">0</div>
-      <div class="counter-label">Shorts watched today</div>
+    <div class="today-stats">
+      <div class="today-counter">
+        <div class="counter-number" id="todayCount">0</div>
+        <div class="counter-label">Shorts watched today</div>
+      </div>
+      <div class="today-counter">
+        <div class="counter-number counter-number-skipped" id="todaySkipped">0</div>
+        <div class="counter-label">Shorts skipped today</div>
+      </div>
     </div>
     <div class="chart-container">
       <canvas id="weeklyChart"></canvas>
@@ -129,6 +173,15 @@
     <div class="setting-item">
       <input type="checkbox" id="enableRedirect">
       <label for="enableRedirect">Redirect to r/GetDisciplined when limit reached</label>
+    </div>
+    <div class="setting-item">
+      <label for="redirectThreshold">Redirect after watching</label>
+      <input type="number" id="redirectThreshold" min="1" max="100" style="width: 60px; margin: 0 8px;">
+      <span>shorts</span>
+    </div>
+    <div class="setting-item">
+      <input type="checkbox" id="enableTimeBasedRedirect">
+      <label for="enableTimeBasedRedirect">Redirect after watching 3 minutes of shorts</label>
     </div>
   </div>
 
