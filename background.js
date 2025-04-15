@@ -1,15 +1,18 @@
 // Initialize storage with default values if not exists
 chrome.runtime.onInstalled.addListener(() => {
+  const today = new Date().toISOString().split('T')[0];
   chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect', 'sessionTimes'], (result) => {
     if (!result.shortsHistory) {
       chrome.storage.local.set({
         shortsHistory: {},
         shortsUrls: {},
         shortsSkipped: {},
+        skippedUrls: {}, // Add skipped URLs tracking
         redirectThreshold: 5, // Default threshold for number of shorts
         enableTimeBasedRedirect: false, // Default time-based redirect setting
         shortsWatchTime: {}, // Track cumulative watch time per day
-        sessionTimes: {} // Track session times per day
+        sessionTimes: {}, // Track session times per day
+        lastActiveDate: today // Add last active date tracking
       });
     }
   });
@@ -80,6 +83,7 @@ async function updateSkippedCount(url) {
 
 // Update the shorts count for today
 async function updateShortsCount(url) {
+  await checkAndHandleDayChange();
   const today = new Date().toISOString().split('T')[0];
   
   chrome.storage.local.get([
@@ -151,7 +155,7 @@ function showNotification(type) {
 
   chrome.notifications.create({
     type: 'basic',
-    iconUrl: 'icons/icon128.png',
+    iconUrl: 'icons/icon1282.png',
     title: 'YouTube Shorts Limit Reached',
     message: message
   });
@@ -206,13 +210,32 @@ async function updateWatchTime(seconds) {
 
 let currentSessionShortsCount = 0;
 
-// Start a new shorts session
-function startShortsSession() {
-  chrome.storage.local.set({
-    isWatchingShorts: true,
-    currentSessionTime: 0
+// Check and handle day changes
+async function checkAndHandleDayChange() {
+  const today = new Date().toISOString().split('T')[0];
+  
+  chrome.storage.local.get(['lastActiveDate'], (result) => {
+    const lastActiveDate = result.lastActiveDate;
+    
+    // If it's a new day or no last active date exists
+    if (!lastActiveDate || lastActiveDate !== today) {
+      // Reset session time
+      chrome.storage.local.set({
+        currentSessionTime: 0,
+        lastActiveDate: today
+      });
+      
+      // Clear badge
+      chrome.action.setBadgeText({ text: '' });
+    }
   });
-  currentSessionShortsCount = 0;
+}
+
+// Modify startShortsSession to include day change check
+function startShortsSession() {
+  checkAndHandleDayChange();
+  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+  chrome.storage.local.set({ sessionStartTime: timestamp });
 }
 
 // Handle shorts viewed
@@ -260,6 +283,35 @@ function endShortsSession() {
     currentSessionTime: 0
   });
   currentSessionShortsCount = 0;
+}
+
+// Handle shorts skipped
+function handleShortsSkipped(url) {
+  checkAndHandleDayChange();
+  const today = new Date().toISOString().split('T')[0];
+  
+  chrome.storage.local.get(['shortsSkipped', 'skippedUrls'], (result) => {
+    const shortsSkipped = result.shortsSkipped || {};
+    const skippedUrls = result.skippedUrls || {};
+    
+    // Update today's skipped count
+    if (!shortsSkipped[today]) {
+      shortsSkipped[today] = 0;
+    }
+    shortsSkipped[today]++;
+    
+    // Update today's skipped URLs
+    if (!skippedUrls[today]) {
+      skippedUrls[today] = [];
+    }
+    skippedUrls[today].push(url);
+    
+    // Update storage
+    chrome.storage.local.set({
+      shortsSkipped: shortsSkipped,
+      skippedUrls: skippedUrls
+    });
+  });
 }
 
 // Initialize badge on startup
