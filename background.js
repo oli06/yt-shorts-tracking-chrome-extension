@@ -45,7 +45,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TEST_NOTIFICATION') {
     // Request notification permission if not already granted
     chrome.notifications.getPermissionLevel(level => {
-      console.log("granted? level", level)
       if (level === 'granted') {
         chrome.notifications.create("somerandomid", 
             {
@@ -55,11 +54,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           message: 'This is a test notification to verify that notifications are working properly.',
           priority: 1,
           requireInteraction: true
-        }, function(id) { console.log("Last error:", chrome.runtime.lastError);}
-        );
-      } else {
-        // If permission not granted, show a console message
-        console.log('Notification permission not granted. Please enable notifications in Chrome settings.');
+        });
       }
     });
   }
@@ -147,8 +142,6 @@ function updateBadge(count) {
 
 // Show notification when reaching limits
 function showNotification(type) {
-  console.log('Showing notification');
-
   const message = type === 'count' 
     ? `You have watched ${chrome.storage.local.get(['redirectThreshold'], (result) => result.redirectThreshold)} Shorts today! Consider taking a break.`
     : 'You have spent 3 minutes watching Shorts today! Consider taking a break.';
@@ -161,9 +154,7 @@ function showNotification(type) {
   });
 
   // Try to open the popup
-  chrome.action.openPopup().catch(error => {
-    console.log('Could not open popup:', error);
-  });
+  chrome.action.openPopup().catch(() => {});
 
   // Check if redirect is enabled
   chrome.storage.local.get(['enableRedirect'], function(result) {
