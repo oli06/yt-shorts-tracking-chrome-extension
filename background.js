@@ -40,26 +40,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Handle messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'TEST_NOTIFICATION') {
-    // Request notification permission if not already granted
-    chrome.notifications.getPermissionLevel(level => {
-      if (level === 'granted') {
-        chrome.notifications.create("somerandomid", 
-            {
-          type: 'basic',
-          iconUrl: "icons/icon48.png",
-          title: 'YouTube Shorts Tracker',
-          message: 'This is a test notification to verify that notifications are working properly.',
-          priority: 1,
-          requireInteraction: true
-        });
-      }
-    });
-  }
-});
-
 // Update the skipped shorts count for today
 async function updateSkippedCount(url) {
   const today = new Date().toISOString().split('T')[0];
