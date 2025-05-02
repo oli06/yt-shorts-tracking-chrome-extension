@@ -1,7 +1,7 @@
 // Initialize storage with default values if not exists
 chrome.runtime.onInstalled.addListener(() => {
   const today = new Date().toISOString().split('T')[0];
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold'], (result) => {
     if (!result.shortsHistory) {
       chrome.storage.local.set({
         shortsHistory: {},
@@ -9,7 +9,6 @@ chrome.runtime.onInstalled.addListener(() => {
         shortsSkipped: {},
         skippedUrls: {}, // Add skipped URLs tracking
         redirectThreshold: 5, // Default threshold for number of shorts
-        enableTimeBasedRedirect: false, // Default time-based redirect setting
         lastActiveDate: today // Add last active date tracking
       });
     }
@@ -56,7 +55,6 @@ async function updateShortsCount(url) {
     'shortsHistory', 
     'shortsUrls', 
     'redirectThreshold',
-    'enableTimeBasedRedirect',
   ], (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsUrls = result.shortsUrls || {};
