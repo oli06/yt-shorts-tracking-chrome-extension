@@ -177,4 +177,14 @@ document.addEventListener('visibilitychange', () => {
 // Listen for page unload (tab closed)
 window.addEventListener('beforeunload', () => {
   endSession();
-}); 
+});
+
+// Listen for YouTube's SPA navigation
+let lastUrl = window.location.href;
+setInterval(() => {
+  const currentUrl = window.location.href;
+  if (currentUrl !== lastUrl) {
+    lastUrl = currentUrl;
+    checkAndSendMessage();
+  }
+}, 100); 
