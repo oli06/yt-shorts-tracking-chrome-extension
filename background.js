@@ -1,7 +1,7 @@
 // Initialize storage with default values if not exists
 chrome.runtime.onInstalled.addListener(() => {
   const today = new Date().toISOString().split('T')[0];
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect', 'sessionTimes'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'redirectThreshold', 'enableTimeBasedRedirect'], (result) => {
     if (!result.shortsHistory) {
       chrome.storage.local.set({
         shortsHistory: {},
@@ -10,8 +10,6 @@ chrome.runtime.onInstalled.addListener(() => {
         skippedUrls: {}, // Add skipped URLs tracking
         redirectThreshold: 5, // Default threshold for number of shorts
         enableTimeBasedRedirect: false, // Default time-based redirect setting
-        shortsWatchTime: {}, // Track cumulative watch time per day
-        sessionTimes: {}, // Track session times per day
         lastActiveDate: today // Add last active date tracking
       });
     }
@@ -27,12 +25,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.type === 'START_SHORTS_SESSION') {
     startShortsSession();
   } else if (request.type === 'END_SESSION') {
-    endShortsSession();
-  } else if (request.type === 'GET_SESSION_TIME') {
-    chrome.storage.local.get(['currentSessionTime'], (result) => {
-      sendResponse({ sessionTime: result.currentSessionTime || 0 });
-    });
-    return true;
+    currentSessionShortsCount = 0;
   } else if (request.type === 'RESET_BADGE') {
     chrome.action.setBadgeText({ text: '' });
   }
@@ -64,19 +57,11 @@ async function updateShortsCount(url) {
     'shortsUrls', 
     'redirectThreshold',
     'enableTimeBasedRedirect',
-    'shortsWatchTime'
   ], (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsUrls = result.shortsUrls || {};
-    const shortsWatchTime = result.shortsWatchTime || {};
     const count = (shortsHistory[today] || 0) + 1;
-    
-    // Update watch time
-    if (!shortsWatchTime[today]) {
-      shortsWatchTime[today] = 0;
-    }
-    shortsWatchTime[today] += 1; // Increment by 1 second
-    
+        
     shortsHistory[today] = count;
     
     // Store the URL
@@ -88,7 +73,6 @@ async function updateShortsCount(url) {
     chrome.storage.local.set({
       shortsHistory: shortsHistory,
       shortsUrls: shortsUrls,
-      shortsWatchTime: shortsWatchTime
     }, () => {
       // Update the badge with the new count
       updateBadge(count);
@@ -97,14 +81,6 @@ async function updateShortsCount(url) {
     // Check count-based redirect threshold
     if (count === result.redirectThreshold) {
       showNotification('count');
-    }
-
-    // Check time-based redirect (3 minutes = 180 seconds)
-    if (result.enableTimeBasedRedirect && shortsWatchTime[today] >= 180) {
-      showNotification('time');
-      chrome.storage.local.set({ 
-        shortsWatchTime: { ...shortsWatchTime, [today]: 0 } // Reset watch time for today
-      });
     }
   });
 }
@@ -162,9 +138,7 @@ async function checkAndHandleDayChange() {
     
     // If it's a new day or no last active date exists
     if (!lastActiveDate || lastActiveDate !== today) {
-      // Reset session time
       chrome.storage.local.set({
-        currentSessionTime: 0,
         lastActiveDate: today
       });
       
@@ -219,15 +193,6 @@ function handleShortsViewed(url) {
       currentSessionShortsCount = 0; // Reset count after redirect
     }
   });
-}
-
-// End the current shorts session
-function endShortsSession() {
-  chrome.storage.local.set({
-    isWatchingShorts: false,
-    currentSessionTime: 0
-  });
-  currentSessionShortsCount = 0;
 }
 
 // Handle shorts skipped

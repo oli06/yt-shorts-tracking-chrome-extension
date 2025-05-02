@@ -55,35 +55,15 @@ function updateStats() {
 
 // Reset statistics
 async function resetStats() {
-  const dates = getLastSevenDays();
-  const dateStrings = dates.map(date => formatDate(date));
-  
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'sessionTimes'], (result) => {
-    const shortsHistory = result.shortsHistory || {};
-    const shortsUrls = result.shortsUrls || {};
-    const shortsSkipped = result.shortsSkipped || {};
-    const sessionTimes = result.sessionTimes || {};
-    
-    // Clear all data for the last 7 days
-    dateStrings.forEach(date => {
-      delete shortsHistory[date];
-      delete shortsUrls[date];
-      delete shortsSkipped[date];
-      delete sessionTimes[date];
-    });
-    
-    chrome.storage.local.set({
-      shortsHistory: shortsHistory,
-      shortsUrls: shortsUrls,
-      shortsSkipped: shortsSkipped,
-      sessionTimes: sessionTimes,
-      currentSessionTime: 0
-    }, () => {
-      // Reset the badge to 0
-      chrome.runtime.sendMessage({ type: 'RESET_BADGE' });
-      // Update the chart and counter
-      updateStats();
-    });
+  chrome.storage.local.set({
+    shortsHistory: {},
+    shortsUrls: {},
+    shortsSkipped: {},
+  }, () => {
+    // Reset the badge to 0
+    chrome.runtime.sendMessage({ type: 'RESET_BADGE' });
+    // Update the chart and counter
+    updateStats();
   });
 }
 
