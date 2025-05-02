@@ -24,8 +24,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleShortsViewed(request.url);
   } else if (request.type === 'SHORTS_SKIPPED') {
     handleShortsSkipped(request.url);
-  } else if (request.type === 'UPDATE_WATCH_TIME') {
-    updateWatchTime(request.seconds);
   } else if (request.type === 'START_SHORTS_SESSION') {
     startShortsSession();
   } else if (request.type === 'END_SESSION') {
@@ -153,32 +151,6 @@ function showNotification(type) {
   });
 }
 
-// Update watch time for today
-async function updateWatchTime(seconds) {
-  const today = new Date().toISOString().split('T')[0];
-  
-  chrome.storage.local.get(['shortsWatchTime', 'enableTimeBasedRedirect', 'currentSessionTime'], (result) => {
-    const shortsWatchTime = result.shortsWatchTime || {};
-    const currentSessionTime = (result.currentSessionTime || 0) + seconds;
-    
-    if (!shortsWatchTime[today]) {
-      shortsWatchTime[today] = 0;
-    }
-    
-    shortsWatchTime[today] += seconds;
-    
-    chrome.storage.local.set({
-      shortsWatchTime: shortsWatchTime,
-      currentSessionTime: currentSessionTime
-    });
-
-    // Check if we've hit the 3-minute threshold
-    if (result.enableTimeBasedRedirect && shortsWatchTime[today] >= 180) {
-      showNotification('time');
-    }
-  });
-}
-
 let currentSessionShortsCount = 0;
 
 // Check and handle day changes
@@ -205,6 +177,8 @@ async function checkAndHandleDayChange() {
 // Modify startShortsSession to include day change check
 function startShortsSession() {
   checkAndHandleDayChange();
+
+  this.currentSessionShortsCount = 0;
   const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
   chrome.storage.local.set({ sessionStartTime: timestamp });
 }

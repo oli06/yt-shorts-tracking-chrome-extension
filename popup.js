@@ -29,7 +29,6 @@ function getLastSevenDays() {
 }
 
 let weeklyChart = null;
-let sessionChart = null;
 let lastWatchedCount = 0;
 let lastSkippedCount = 0;
 
@@ -40,40 +39,16 @@ function formatTime(seconds) {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
-// Update session timer
-function updateSessionTimer() {
-  chrome.runtime.sendMessage({ type: 'GET_SESSION_TIME' }, (response) => {
-    if (response && response.sessionTime !== undefined) {
-      document.getElementById('sessionTimer').textContent = formatTime(response.sessionTime);
-    }
-  });
-}
-
-// Convert session time to hour of the day (0-23)
-function getHourFromTimestamp(timestamp) {
-  const [hours] = timestamp.split(':').map(Number);
-  return hours;
-}
-
-// Convert duration from seconds to minutes
-function getDurationInMinutes(duration) {
-  return Math.round(duration / 60);
-}
-
 // Update the popup with current statistics
 function updateStats() {
-  chrome.storage.local.get(['shortsHistory', 'shortsSkipped', 'sessionTimes', 'currentSessionTime'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsSkipped'], (result) => {
     const today = formatDate(new Date());
     
     // Update today's counts
     document.getElementById('todayCount').textContent = (result.shortsHistory || {})[today] || 0;
     document.getElementById('todaySkipped').textContent = (result.shortsSkipped || {})[today] || 0;
     
-    // Update session timer
-    document.getElementById('sessionTimer').textContent = formatTime(result.currentSessionTime || 0);
-    
     // Initial chart updates
-    updateSessionChart();
     updateWeeklyChart();
   });
 }
@@ -114,23 +89,11 @@ async function resetStats() {
 
 // Export statistics data
 function exportStatistics() {
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'shortsWatchTime', 'sessionTimes', 'skippedUrls'], (result) => {
+  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'skippedUrls'], (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsUrls = result.shortsUrls || {};
     const shortsSkipped = result.shortsSkipped || {};
-    const shortsWatchTime = result.shortsWatchTime || {};
-    const sessionTimes = result.sessionTimes || {};
     const skippedUrls = result.skippedUrls || {};
-    
-    // Calculate total watch time in minutes
-    const totalWatchTime = Object.values(shortsWatchTime).reduce((sum, seconds) => sum + seconds, 0) / 60;
-    
-    // Calculate total session time in minutes
-    const totalSessionTime = Object.values(sessionTimes).reduce((sum, sessions) => {
-      return sum + sessions.reduce((sessionSum, session) => {
-        return sessionSum + (typeof session === 'object' ? session.duration : session);
-      }, 0);
-    }, 0) / 60;
     
     // Create a structured object for export
     const exportData = {
@@ -139,26 +102,8 @@ function exportStatistics() {
         totalDays: Object.keys(shortsHistory).length,
         totalShortsWatched: Object.values(shortsHistory).reduce((sum, count) => sum + count, 0),
         totalShortsSkipped: Object.values(shortsSkipped).reduce((sum, count) => sum + count, 0),
-        totalWatchTimeMinutes: Math.round(totalWatchTime),
-        totalSessionTimeMinutes: Math.round(totalSessionTime)
       },
       dailyStats: Object.entries(shortsHistory).map(([date, count]) => {
-        // Get sessions for this day
-        const daySessions = sessionTimes[date] || [];
-        const formattedSessions = daySessions.map(session => {
-          if (typeof session === 'object') {
-            return {
-              duration: formatTime(session.duration),
-              durationMinutes: Math.round(session.duration / 60),
-              timestamp: session.timestamp
-            };
-          }
-          return {
-            duration: formatTime(session),
-            durationMinutes: Math.round(session / 60)
-          };
-        });
-        
         return {
           date: date,
           formattedDate: new Date(date).toLocaleDateString('en-US', {
@@ -169,9 +114,6 @@ function exportStatistics() {
           }),
           watched: count,
           skipped: shortsSkipped[date] || 0,
-          watchTimeSeconds: shortsWatchTime[date] || 0,
-          watchTimeFormatted: formatTime(shortsWatchTime[date] || 0),
-          sessions: formattedSessions,
           watchedUrls: shortsUrls[date] || [],
           skippedUrls: skippedUrls[date] || []
         };
@@ -201,10 +143,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
-  // Start timer update interval
-  updateSessionTimer();
-  setInterval(updateSessionTimer, 1000);
-  
   // Add settings button click handler
   document.getElementById('settingsButton').addEventListener('click', function() {
     chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
@@ -217,17 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Listen for storage changes
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-      // Update session timer display if currentSessionTime changed
-      if (changes.currentSessionTime) {
-        document.getElementById('sessionTimer').textContent = 
-          formatTime(changes.currentSessionTime.newValue || 0);
-      }
-      
-      // Update session chart only when sessionTimes changes
-      if (changes.sessionTimes) {
-        updateSessionChart();
-      }
-      
       // Update stats and weekly chart if counts changed
       if (changes.shortsHistory || changes.shortsSkipped) {
         updateWeeklyChart();
@@ -238,89 +165,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initial update
   updateStats();
 });
-
-// Update session distribution chart
-function updateSessionChart() {
-  chrome.storage.local.get(['sessionTimes'], (result) => {
-    const sessionTimes = result.sessionTimes || {};
-    const dates = getLastSevenDays();
-    const datasets = [];
-    
-    // Create datasets for each day
-    dates.forEach((date, index) => {
-      const dateStr = formatDate(date);
-      const dayData = sessionTimes[dateStr] || [];
-      
-      // Initialize array for 24 hours
-      const hourlyData = new Array(24).fill(0);
-      
-      // Aggregate session durations by hour
-      dayData.forEach(session => {
-        if (typeof session === 'object') {
-          const hour = getHourFromTimestamp(session.timestamp);
-          const durationMinutes = getDurationInMinutes(session.duration);
-          hourlyData[hour] += durationMinutes;
-        }
-      });
-      
-      // Add dataset for this day
-      datasets.push({
-        label: formatDateDisplay(date),
-        data: hourlyData,
-        borderColor: `hsl(${index * 360/7}, 70%, 50%)`,
-        backgroundColor: `hsla(${index * 360/7}, 70%, 50%, 0.1)`,
-        fill: true,
-        tension: 0.4
-      });
-    });
-    
-    // Create or update session chart
-    const ctx = document.getElementById('sessionChart').getContext('2d');
-    if (sessionChart) {
-      sessionChart.destroy();
-    }
-    
-    sessionChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`),
-        datasets: datasets
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Duration (minutes)'
-            }
-          },
-          x: {
-            title: {
-              display: true,
-              text: 'Hour of Day'
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `${context.dataset.label}: ${Math.round(context.raw)} minutes`;
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-}
 
 // Update weekly stats chart
 function updateWeeklyChart() {

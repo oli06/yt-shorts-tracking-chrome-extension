@@ -3,34 +3,9 @@ let lastShortsUrl = '';
 let shortsTimer = null;
 let currentShortsUrl = null;
 let shortsStartTime = null;
-let watchTimeInterval = null;
 let currentVideo = null;
 let sessionStartTime = null;
 let thresholdTimer = null;
-
-// Function to send watch time update
-function updateWatchTime() {
-  if (currentShortsUrl && currentVideo && !currentVideo.paused) {
-    chrome.runtime.sendMessage({ 
-      type: 'UPDATE_WATCH_TIME',
-      seconds: 1
-    });
-  }
-}
-
-// Function to start watch time tracking
-function startWatchTimeTracking() {
-  stopWatchTimeTracking(); // Ensure no duplicate intervals
-  watchTimeInterval = setInterval(updateWatchTime, 1000);
-}
-
-// Function to stop watch time tracking
-function stopWatchTimeTracking() {
-  if (watchTimeInterval) {
-    clearInterval(watchTimeInterval);
-    watchTimeInterval = null;
-  }
-}
 
 // Function to format time in MM:SS
 function formatTime(seconds) {
@@ -57,49 +32,12 @@ function endSession() {
   }
 }
 
-// Bound event handlers to ensure proper removal
-function onVideoPlay() {
-  startWatchTimeTracking();
-}
-
-function onVideoPause() {
-  stopWatchTimeTracking();
-}
-
-// Function to observe video element
-function observeVideo(video) {
-  if (!video) return;
-  
-  // Clean up previous video
-  if (currentVideo) {
-    currentVideo.removeEventListener('play', onVideoPlay);
-    currentVideo.removeEventListener('pause', onVideoPause);
-    stopWatchTimeTracking();
-  }
-  
-  currentVideo = video;
-  
-  // Watch for play/pause events
-  video.addEventListener('play', onVideoPlay);
-  video.addEventListener('pause', onVideoPause);
-  video.addEventListener('timeupdate', () => {
-    if (!video.paused && !watchTimeInterval) {
-      onVideoPlay();
-    }
-  });
-  
-  // Trigger play handler immediately if video is already playing
-  if (!video.paused && video.currentTime > 0) {
-    onVideoPlay();
-  }
-}
-
 // Function to find and observe the video element
 function findAndObserveVideo() {
   const video = document.querySelector('video');
   if (video) {
     if (video !== currentVideo) {
-      observeVideo(video);
+      currentVideo = video;
     }
   } else {
     // Try again in a short moment
@@ -138,10 +76,7 @@ function checkAndSendMessage() {
       if (shortsTimer) {
         clearTimeout(shortsTimer);
       }
-      
-      // Stop existing watch time tracking
-      stopWatchTimeTracking();
-      
+            
       // Find and observe the video element immediately for the new Short
       findAndObserveVideo();
       
@@ -152,11 +87,6 @@ function checkAndSendMessage() {
           type: 'SHORTS_VIEWED',
           url: newUrl
         });
-        
-        // Check video state again after marking as viewed
-        if (currentVideo && !currentVideo.paused) {
-          onVideoPlay();
-        }
       }, 1000); // 1 second delay
     } else {
       // Re-check video element in case it was replaced
@@ -180,13 +110,6 @@ function checkAndSendMessage() {
       shortsTimer = null;
     }
     
-    if (currentVideo) {
-      currentVideo.removeEventListener('play', onVideoPlay);
-      currentVideo.removeEventListener('pause', onVideoPause);
-      currentVideo = null;
-    }
-    
-    stopWatchTimeTracking();
     lastShortsUrl = '';
     currentShortsUrl = null;
     shortsStartTime = null;
