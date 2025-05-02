@@ -9,7 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
         shortsSkipped: {},
         skippedUrls: {}, // Add skipped URLs tracking
         redirectThreshold: 5, // Default threshold for number of shorts
-        lastActiveDate: today // Add last active date tracking
+        lastActiveDate: today, // Add last active date tracking
+        enableRedirect: true, // Add enableRedirect flag
+        customRedirectUrl: 'https://www.reddit.com/r/GetDisciplined' // Add customRedirectUrl
       });
     }
   });
@@ -109,15 +111,16 @@ function showNotification(type) {
   chrome.action.openPopup().catch(() => {});
 
   // Check if redirect is enabled
-  chrome.storage.local.get(['enableRedirect'], function(result) {
+  chrome.storage.local.get(['enableRedirect', 'customRedirectUrl'], function(result) {
     if (result.enableRedirect) {
       // Get the current tab and remove it, then create a new one
       chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         if (tabs[0]) {
           // Remove the current tab
           chrome.tabs.remove(tabs[0].id, function() {
-            // Create a new tab with r/GetDisciplined
-            chrome.tabs.create({ url: 'https://www.reddit.com/r/GetDisciplined' });
+            // Create a new tab with the custom redirect URL or default
+            const redirectUrl = result.customRedirectUrl || 'https://www.reddit.com/r/GetDisciplined';
+            chrome.tabs.create({ url: redirectUrl });
           });
         }
       });
