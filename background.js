@@ -38,22 +38,6 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Update the skipped shorts count for today
-async function updateSkippedCount(url) {
-  const today = new Date().toISOString().split('T')[0];
-  
-  browser.storage.local.get(['shortsSkipped'], (result) => {
-    const shortsSkipped = result.shortsSkipped || {};
-    const count = (shortsSkipped[today] || 0) + 1;
-    
-    shortsSkipped[today] = count;
-    
-    browser.storage.local.set({
-      shortsSkipped: shortsSkipped
-    });
-  });
-}
-
 // Update the badge on the extension icon
 function updateBadge(count) {
   // Set the badge text
@@ -136,7 +120,7 @@ function handleShortsViewed(url) {
   const today = new Date().toISOString().split('T')[0];
   
   browser.storage.local.get(['shortsHistory', 'shortsUrls', 'enableRedirect', 'redirectThreshold', 'currentSessionShortsCount'], (result) => {
-    const shortsHistory = result.shortsHistory || {};
+    const shortsHistory = (typeof result.shortsHistory === 'object' && result.shortsHistory !== null) ? result.shortsHistory : {};
     const shortsUrls = (typeof result.shortsUrls === 'object' && result.shortsUrls !== null) ? result.shortsUrls : {};
     let currentSessionShortsCount = result.currentSessionShortsCount || 0;
     
@@ -144,7 +128,7 @@ function handleShortsViewed(url) {
     if (!shortsHistory[today]) {
       shortsHistory[today] = 0;
     }
-    shortsHistory[today] = shortsHistory[today] + 1;
+    shortsHistory[today]++;
     
     // Update today's URLs
     if (!Array.isArray(shortsUrls[today])) {
