@@ -41,7 +41,7 @@ function formatTime(seconds) {
 
 // Update the popup with current statistics
 function updateStats() {
-  chrome.storage.local.get(['shortsHistory', 'shortsSkipped'], (result) => {
+  browser.storage.local.get(['shortsHistory', 'shortsSkipped'], (result) => {
     const today = formatDate(new Date());
     
     // Update today's counts
@@ -55,21 +55,26 @@ function updateStats() {
 
 // Reset statistics
 async function resetStats() {
-  chrome.storage.local.set({
+  browser.storage.local.set({
     shortsHistory: {},
     shortsUrls: {},
     shortsSkipped: {},
   }, () => {
     // Reset the badge to 0
-    chrome.runtime.sendMessage({ type: 'RESET_BADGE' });
+    browser.runtime.sendMessage({ type: 'RESET_BADGE' });
     // Update the chart and counter
     updateStats();
   });
 }
 
+function isSafari() {
+  const ua = navigator.userAgent;
+  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Firefox') && !ua.includes('Edg');
+}
+
 // Export statistics data
 function exportStatistics() {
-  chrome.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'skippedUrls'], (result) => {
+  browser.storage.local.get(['shortsHistory', 'shortsUrls', 'shortsSkipped', 'skippedUrls'], async (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsUrls = result.shortsUrls || {};
     const shortsSkipped = result.shortsSkipped || {};
@@ -102,19 +107,29 @@ function exportStatistics() {
     
     // Create and download the file
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `youtube-shorts-stats-${formatDateExport(new Date())}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    if (isSafari()) {
+  //     browser.notification.create({
+  //       type: "basic",
+  // iconUrl: "icons/icon1282.png",
+  // title: "Notification",
+  // message: "Hello from your Safari extension!"
+  //   });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `youtube-shorts-stats-${formatDateExport(new Date())}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   });
 }
 
 // Listen for messages from content script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SHORTS_VIEWED' || request.type === 'SHORTS_SKIPPED') {
     // Update the stats when a new Shorts video is viewed or skipped
     updateStats();
@@ -125,7 +140,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 document.addEventListener('DOMContentLoaded', function() {
   // Add settings button click handler
   document.getElementById('settingsButton').addEventListener('click', function() {
-    chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
+    browser.tabs.create({ url: browser.runtime.getURL('settings.html') });
   });
   
   // Add other event listeners
@@ -133,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('exportButton').addEventListener('click', exportStatistics);
   
   // Listen for storage changes
-  chrome.storage.onChanged.addListener((changes, namespace) => {
+  browser.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
       // Update stats and weekly chart if counts changed
       if (changes.shortsHistory || changes.shortsSkipped) {
@@ -148,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Update weekly stats chart
 function updateWeeklyChart() {
-  chrome.storage.local.get(['shortsHistory', 'shortsSkipped'], (result) => {
+  browser.storage.local.get(['shortsHistory', 'shortsSkipped'], (result) => {
     const shortsHistory = result.shortsHistory || {};
     const shortsSkipped = result.shortsSkipped || {};
     const dates = getLastSevenDays();
